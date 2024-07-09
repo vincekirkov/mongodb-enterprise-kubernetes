@@ -260,10 +260,11 @@ if type oc &>/dev/null; then
 fi
 
 operator_logs_filename="${operator_name}_${current_date}.logs"
+operator_container_name="mongodb-enterprise-operator-multi-cluster"
 echo "+ Saving Operator logs to file ${operator_logs_filename}"
-kubectl -n "${operator_namespace}" logs "pod/${mdb_operator_pod}" --tail 2000 >"${log_dir}/${operator_logs_filename}"
+kubectl -n "${operator_namespace}" logs "pod/${mdb_operator_pod}" -c ${operator_container_name} --tail 2000 >"${log_dir}/${operator_logs_filename}"
 
-operator_container_pretty_name=$(kubectl -n "${operator_namespace}" exec -it "${mdb_operator_pod}" -- sh -c "cat /etc/*release" | grep "PRETTY_NAME" | cut -d'=' -f 2)
+operator_container_pretty_name=$(kubectl -n "${operator_namespace}" exec -it "${mdb_operator_pod}" -c ${operator_container_name} -- sh -c "cat /etc/*release" | grep "PRETTY_NAME" | cut -d'=' -f 2)
 echo "+ Operator is running on: ${operator_container_pretty_name}"
 
 echo "++ Kubernetes Cluster Ecosystem"
@@ -305,6 +306,7 @@ if [ ${collect_om} == 0 ]; then
 fi
 
 if [ ${collect_om} == 1 ]; then
+  ops_manager_container_name="mongodb-ops-manager"
   ops_manager_filename="ops_manager.yaml"
   echo "+ Saving OpsManager Status"
   kubectl -n "${namespace}" get om -o wide
@@ -313,7 +315,7 @@ if [ ${collect_om} == 1 ]; then
   echo "+ Saving Pods state to ${om_resource_name}-N.logs"
   pods_in_namespace=$(kubectl -n "${namespace}" get pods -o name -l "app=${om_resource_name}-svc" | cut -d'/' -f 2)
   for pod in ${pods_in_namespace}; do
-    kubectl -n "${namespace}" logs "${pod}" --tail 2000 >"${log_dir}/${pod}.log"
+    kubectl -n "${namespace}" logs "${pod}" -c ${ops_manager_container_name} --tail 2000 >"${log_dir}/${pod}.log"
     echo "Collecting Events: ${pod}"
     kubectl -n "${namespace}" get event --field-selector "involvedObject.name=${pod}" >"${log_dir}/${pod}_events.log"
   done
